@@ -1,4 +1,9 @@
-"""Pure Python venv creation and TheAuditor installation."""
+"""Pure Python venv creation and TheAuditor installation.
+
+REQUIREMENTS:
+- UV package manager (https://docs.astral.sh/uv/)
+- Python 3.11+ (managed by UV or system)
+"""
 
 import json
 import os
@@ -38,6 +43,51 @@ NODE_CHECKSUMS = {
     "node-v20.11.1-darwin-x64.tar.gz": "c52e7fb0709dbe63a4cbe08ac8af3479188692937a7bd8e776e0eedfa33bb848",
     "node-v20.11.1-darwin-arm64.tar.gz": "e0065c61f340e85106a99c4b54746c5cee09d59b08c5712f67f99e92aa44995d"
 }
+
+
+def check_uv_installed() -> None:
+    """
+    Verify UV package manager is installed.
+
+    TheAuditor requires UV for 10-100x faster package installation compared to pip.
+    UV is a modern Python package manager written in Rust by Astral (creators of Ruff).
+
+    Raises:
+        RuntimeError: If UV is not found in PATH
+    """
+    if not shutil.which("uv"):
+        install_instructions = {
+            "Darwin": "curl -LsSf https://astral.sh/uv/install.sh | sh",
+            "Linux": "curl -LsSf https://astral.sh/uv/install.sh | sh",
+            "Windows": "powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\""
+        }
+
+        system = platform.system()
+        install_cmd = install_instructions.get(system, install_instructions["Linux"])
+
+        raise RuntimeError(
+            f"UV package manager is required but not found.\n\n"
+            f"UV is 10-100x faster than pip and required by TheAuditor v1.4.2+.\n\n"
+            f"Install UV for {system}:\n"
+            f"  {install_cmd}\n\n"
+            f"Documentation: https://docs.astral.sh/uv/\n"
+            f"After installation, restart your terminal and try again."
+        )
+
+    # UV is installed - print version info
+    try:
+        result = subprocess.run(
+            ["uv", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            version = result.stdout.strip()
+            print(f"[UV] Using UV package manager: {version}")
+    except Exception:
+        # UV exists but couldn't get version - not critical
+        print("[UV] Using UV package manager")
 
 
 def _extract_pyproject_dependencies(pyproject_path: Path) -> List[str]:
@@ -181,18 +231,21 @@ def create_venv(target_dir: Path, force: bool = False) -> Path:
 
 def install_theauditor_editable(venv_path: Path, theauditor_root: Optional[Path] = None) -> bool:
     """
-    Install TheAuditor in editable mode into the venv.
-    
+    Install TheAuditor in editable mode into the venv using UV.
+
     Args:
         venv_path: Path to the virtual environment
         theauditor_root: Path to TheAuditor source (auto-detected if None)
-        
+
     Returns:
         True if installation succeeded
     """
+    # Verify UV is installed before proceeding
+    check_uv_installed()
+
     if theauditor_root is None:
         theauditor_root = find_theauditor_root()
-    
+
     python_exe, aud_exe = get_venv_paths(venv_path)
     
     if not python_exe.exists():
@@ -205,14 +258,14 @@ def install_theauditor_editable(venv_path: Path, theauditor_root: Optional[Path]
     # Check if already installed
     try:
         stdout_path, stderr_path = TempManager.create_temp_files_for_subprocess(
-            str(venv_path.parent), "pip_show"
+            str(venv_path.parent), "uv_pip_show"
         )
-        
+
         with open(stdout_path, 'w+', encoding='utf-8') as stdout_fp, \
              open(stderr_path, 'w+', encoding='utf-8') as stderr_fp:
-            
+
             result = subprocess.run(
-                [str(python_exe), "-m", "pip", "show", "theauditor"],
+                ["uv", "pip", "show", "theauditor", "--python", str(python_exe)],
                 stdout=stdout_fp,
                 stderr=stderr_fp,
                 text=True,
@@ -237,33 +290,31 @@ def install_theauditor_editable(venv_path: Path, theauditor_root: Optional[Path]
             # Upgrade to ensure latest
             print("  Upgrading to ensure latest version...")
     except subprocess.TimeoutExpired:
-        print("Warning: pip show timed out, proceeding with install")
-    
-    # Install in editable mode
+        print("Warning: uv pip show timed out, proceeding with install")
+
+    # Install in editable mode using UV
     print(f"Installing TheAuditor from {theauditor_root}...", flush=True)
-    
+
     cmd = [
-        str(python_exe),
-        "-m", "pip",
-        "install",
-        "--no-cache-dir",
-        f"-e", f"{theauditor_root}[dev]"
+        "uv", "pip", "install",
+        "--python", str(python_exe),
+        "-e", f"{theauditor_root}[dev]"
     ]
-    
+
     try:
         stdout_path, stderr_path = TempManager.create_temp_files_for_subprocess(
-            str(venv_path.parent), "pip_install"
+            str(venv_path.parent), "uv_pip_install"
         )
-        
+
         with open(stdout_path, 'w+', encoding='utf-8') as stdout_fp, \
              open(stderr_path, 'w+', encoding='utf-8') as stderr_fp:
-            
+
             result = subprocess.run(
                 cmd,
                 stdout=stdout_fp,
                 stderr=stderr_fp,
                 text=True,
-                timeout=120,
+                timeout=60,  # UV is 10-100x faster than pip, reduced from 120s
                 cwd=str(venv_path.parent)
             )
         
@@ -280,12 +331,12 @@ def install_theauditor_editable(venv_path: Path, theauditor_root: Optional[Path]
             pass
         
         if result.returncode != 0:
-            print(f"Error installing TheAuditor:")
+            print(f"Error installing TheAuditor with UV:")
             print(result.stderr)
             return False
-        
+
         check_mark = "[OK]"
-        print(f"{check_mark} Installed TheAuditor (editable) from {theauditor_root}")
+        print(f"{check_mark} Installed TheAuditor (editable) from {theauditor_root} using UV")
         
         # Verify installation
         if aud_exe.exists():
@@ -910,19 +961,19 @@ def setup_project_venv(target_dir: Path, force: bool = False) -> Tuple[Path, boo
             ]
 
             stdout_path, stderr_path = TempManager.create_temp_files_for_subprocess(
-                str(target_dir), "pip_linters"
+                str(target_dir), "uv_pip_linters"
             )
 
             with open(stdout_path, 'w+', encoding='utf-8') as stdout_fp, \
                  open(stderr_path, 'w+', encoding='utf-8') as stderr_fp:
 
-                # Install linters as separate packages
+                # Install linters as separate packages using UV
                 result = subprocess.run(
-                    [str(python_exe), "-m", "pip", "install"] + linter_packages,
+                    ["uv", "pip", "install", "--python", str(python_exe)] + linter_packages,
                     stdout=stdout_fp,
                     stderr=stderr_fp,
                     text=True,
-                    timeout=300  # Increased to 5 minutes for slower systems
+                    timeout=120  # UV is 10-100x faster, reduced from 300s to 120s
                 )
             
             with open(stdout_path, 'r', encoding='utf-8') as f:
@@ -949,18 +1000,18 @@ def setup_project_venv(target_dir: Path, force: bool = False) -> Tuple[Path, boo
                 ]
 
                 stdout_path2, stderr_path2 = TempManager.create_temp_files_for_subprocess(
-                    str(target_dir), "pip_ast"
+                    str(target_dir), "uv_pip_ast"
                 )
 
                 with open(stdout_path2, 'w+', encoding='utf-8') as stdout_fp, \
                      open(stderr_path2, 'w+', encoding='utf-8') as stderr_fp:
 
                     result2 = subprocess.run(
-                        [str(python_exe), "-m", "pip", "install"] + ast_packages,
+                        ["uv", "pip", "install", "--python", str(python_exe)] + ast_packages,
                         stdout=stdout_fp,
                         stderr=stderr_fp,
                         text=True,
-                        timeout=300
+                        timeout=120  # UV is 10-100x faster, reduced from 300s to 120s
                     )
 
                 with open(stdout_path2, 'r', encoding='utf-8') as f:

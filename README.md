@@ -93,26 +93,54 @@ All three commands run entirely offline against `.pf/repo_index.db` and `.pf/gra
 
 ## ⚡ Quick Start
 
-**Important Directory Structure:**
-- `~/tools/TheAuditor/` - Where TheAuditor tool lives
-- `~/my-project/` - Your project being analyzed
-- `~/my-project/.auditor_venv/` - Sandbox created BY TheAuditor
-- `~/my-project/.pf/` - Analysis results
+### ⚠️ Breaking Change in v1.4.2-RC1
+
+**TheAuditor now requires UV** (10-100x faster than pip). UV is a modern Python package manager written in Rust.
+
+**Install UV (one-time, ~5 seconds):**
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Restart your terminal after installation
+```
+
+**Documentation:** https://docs.astral.sh/uv/
+
+---
 
 ### 1) Install TheAuditor (one-time)
 
+**TheAuditor can be installed from ANY location** - no specific directory structure required.
+
 ```bash
-# Clone TheAuditor to your preferred tools directory
+# Clone TheAuditor to your preferred location (examples below)
+# Option 1: ~/tools/ (common convention)
 cd ~/tools
 git clone https://github.com/TheAuditorTool/Auditor.git
-cd TheAuditor
+cd Auditor
 
-# Install using your system Python (no venv here)
-pip install -e .
+# Option 2: /opt/ (system-wide tools)
+# cd /opt && git clone https://github.com/TheAuditorTool/Auditor.git && cd Auditor
+
+# Option 3: Any custom location
+# cd /your/custom/path && git clone https://github.com/TheAuditorTool/Auditor.git && cd Auditor
+
+# Install using UV (10-100x faster than pip)
+uv pip install -e .
 
 # Verify installation
 aud --version
 ```
+
+**What gets created:**
+- TheAuditor is installed once and can analyze unlimited projects
+- Each project you analyze will get its own `.auditor_venv/` sandbox
+- Analysis results are stored in `<your-project>/.pf/`
 
 ### 2) Analyze your project
 
@@ -265,8 +293,8 @@ TheAuditor documents vulnerabilities, which can occasionally trip antivirus heur
 **Common fixes:**
 
 ```bash
-# Refresh tool install
-cd ~/tools/TheAuditor && git pull && pip install -e .
+# Refresh tool install (from wherever you installed TheAuditor)
+cd /path/to/Auditor && git pull && uv pip install -e .
 
 # Rebuild project sandbox
 cd ~/my-project && rm -rf .auditor_venv && aud setup-ai --target .

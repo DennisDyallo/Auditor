@@ -21,13 +21,34 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 NEVER EVER FUCKING TOUCH MY GIT WITH YOUR DUMBASS FUCKING "CO AUTHORED BY CLAUDE" FUCK THE FUCKING FUCK OFF DUMBASS FUCKFACE!!!
 
+## PACKAGE MANAGER: UV ONLY (v1.4.2+)
+
+**TheAuditor requires UV package manager** (10-100x faster than pip). pip is NO LONGER SUPPORTED.
+
+```bash
+# Install UV (one-time)
+# macOS/Linux:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell):
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Then install TheAuditor from ANY location:
+cd /path/to/wherever/you/want
+git clone https://github.com/TheAuditorTool/Auditor.git
+cd Auditor
+uv pip install -e .
+```
+
+**Location Independence:** TheAuditor can be installed ANYWHERE. Paths shown below (C:/Users/santa/Desktop/TheAuditor) are just examples from one user's setup. Replace with YOUR actual installation path.
+
 ## NEVER USE SQLITE3 COMMAND DIRECTLY
 
 **ALWAYS** use Python with sqlite3 import. The sqlite3 command is not installed in WSL.
 
 ```python
-# CORRECT - Always use this pattern
-cd C:/Users/santa/Desktop/TheAuditor && .venv/Scripts/python.exe -c "
+# CORRECT - Always use this pattern (adjust path to YOUR installation)
+cd /your/actual/path/to/TheAuditor && .venv/Scripts/python.exe -c "
 import sqlite3
 conn = sqlite3.connect('C:/path/to/database.db')
 c = conn.cursor()
@@ -129,8 +150,9 @@ python -m theauditor.cli --help  # ❌ Too verbose
 
 TheAuditor is an offline-first, AI-centric SAST (Static Application Security Testing) and code intelligence platform written in Python. It performs comprehensive security auditing and code analysis for Python and JavaScript/TypeScript projects, producing AI-consumable reports optimized for LLM context windows.
 
-**Version**: 1.3.0-RC1 (pyproject.toml:7)
+**Version**: 1.4.2-RC1 (pyproject.toml:7)
 **Python**: >=3.11 required (pyproject.toml:10)
+**Package Manager**: UV (required, replaces pip)
 
 ---
 

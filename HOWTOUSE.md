@@ -8,9 +8,24 @@ This comprehensive guide covers everything you need to know about setting up, co
 
 Before installing **TheAuditor**, ensure you have:
 
-- **Python 3.11 or higher** (3.12+ recommended)
+- **UV package manager** (10-100x faster than pip, required by v1.4.2+)
+- **Python 3.11 or higher** (3.12+ recommended, or let UV manage it)
 - **Git** (for repository operations)
 - **Operating System**: Linux, macOS, or Windows with WSL
+
+### Installing UV (one-time, ~5 seconds)
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Restart your terminal after installation
+```
+
+**Documentation:** https://docs.astral.sh/uv/
 
 ---
 
@@ -24,34 +39,40 @@ TheAuditor uses a **dual-environment** design:
 
 ### Step 1: Install TheAuditor Tool
 
-**IMPORTANT**: Do NOT create a virtual environment. Use your system Python.
+**TheAuditor can be installed from ANY location** - no specific directory structure required.
 
 ```bash
-# Choose a permanent location for TheAuditor (NOT inside your projects)
-cd ~/tools  # or C:\tools on Windows, or wherever you keep dev tools
+# Choose ANY permanent location for TheAuditor (NOT inside your projects)
+# Examples:
+#   ~/tools/           (common convention)
+#   /opt/              (system-wide tools)
+#   ~/dev/tools/       (custom location)
+#   C:\DevTools\       (Windows)
+
+cd ~/tools  # or your preferred location
 
 # Clone the repository
 git clone https://github.com/TheAuditorTool/Auditor.git
-cd TheAuditor
+cd Auditor
 
-# Install TheAuditor to your system
-pip install -e .
+# Install TheAuditor using UV (10-100x faster than pip)
+uv pip install -e .
 
 # Verify the installation worked
 aud --version
 
 # Optional: Install with ML capabilities
-# pip install -e ".[ml]"
+# uv pip install -e ".[ml]"
 
 # For development with all optional dependencies:
-# pip install -e ".[all]"  # Includes Insights module
+# uv pip install -e ".[all]"  # Includes Insights module
 ```
 
 **Common Mistakes to Avoid:**
 - ❌ Don't create a venv before installing TheAuditor
 - ❌ Don't install TheAuditor inside your project directory
-- ❌ Don't run `pip install` from your project directory
-- ✅ Install TheAuditor ONCE in a tools directory
+- ❌ Don't use pip (use uv pip instead)
+- ✅ Install TheAuditor ONCE from any convenient location
 - ✅ Use TheAuditor to analyze MANY projects
 
 ### Step 2: Setup Project for Analysis (MANDATORY)
